@@ -1,6 +1,6 @@
 # Route release diagnostics across model vendors
 
-The decision is local and deterministic: a failed build is held without calling a model, while a passed build is released and receives a short developer-facing diagnostic. Infrai supplies the model path through an OpenAI-compatible `base_url`, so `model="auto"` can route the diagnostic across vendors without vendor-specific branches in the release service.
+The call is made locally and deterministically: a failed build is held without touching a model, and a passed build is released with a short diagnostic for developers. Infrai gives you the model path through an OpenAI-compatible `base_url`, so `model="auto"` can route the diagnostic across vendors with no vendor-specific branches in the release service.
 
 Start with the working path:
 
@@ -24,9 +24,9 @@ The input is build `build-1842`, branch `main`, status `passed`, and a successfu
 
 ## The boundary worth keeping
 
-`release_diagnostics.py` owns the business rule, while `release_service.py` owns the model request. This split matters for agent tooling: orchestration policy remains testable without a network call, and the model is asked to explain a decision rather than make an unrestricted release choice.
+`release_diagnostics.py` owns the business rule, while `release_service.py` owns the model request. This split matters for agent tooling: orchestration policy stays testable without a network call, and the model explains a decision instead of making an open-ended release choice.
 
-The one real gotcha is the raw-response flow. `with_raw_response.create(...)` exposes Infrai's routing headers, but the completion body must be parsed before reading `choices`; the service therefore calls `raw.parse()` first and reads `x-infrai-vendor` and `x-infrai-cost-usd` from the same response afterward. The official OpenAI client handles HTTP retries, including backoff for rate limiting, and every diagnostic call uses the same `INFRAI_API_KEY` rather than separate vendor credentials.
+The one real gotcha is the raw-response flow. `with_raw_response.create(...)` exposes Infrai's routing headers, but you must parse the completion body before reading `choices`; the service calls `raw.parse()` first and reads `x-infrai-vendor` and `x-infrai-cost-usd` from that same response after. The official OpenAI client does HTTP retries, including backoff on rate limits, and every diagnostic call uses the same `INFRAI_API_KEY` instead of separate vendor credentials.
 
 ## Verify the release rule
 
@@ -36,7 +36,7 @@ Run the focused tests:
 pytest -q
 ```
 
-They prove that a failed build produces `hold` and never reaches the diagnostic model, while a passed build produces `release` and carries the model diagnostic into the response.
+They prove a failed build produces `hold` and never hits the diagnostic model, while a passed build produces `release` and carries the model diagnostic into the response.
 
 ## Scope
 
